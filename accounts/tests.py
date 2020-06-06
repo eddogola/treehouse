@@ -1,5 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.core import mail
+from celery.contrib.testing.worker import start_worker
+from treehouse.celery import app
 
 class AuthenticationTestCase(TestCase):
     
@@ -20,3 +24,18 @@ class AuthenticationTestCase(TestCase):
         resp = self.client.post(reverse('account_signup'), data)
         self.assertRedirects(resp, reverse('home'))
         
+    def test_email_send_done_by_celery_worker(self):
+        
+        #create test user
+        get_user_model().objects.create_user(
+            username='testuser',
+            email='testuser@email.com',
+            password='testpass123',
+        )
+        
+        #integration test
+        data = {
+            'email': 'testuser@email.com'
+        }
+        resp = self.client.post(reverse('account_reset_password'), data)
+        self.assertGreaterEqual(len(mail.outbox), 1)

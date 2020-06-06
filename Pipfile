@@ -9,6 +9,8 @@ verify_ssl = true
 django = "==2.2.8"
 django-environ = "*"
 django-allauth = "*"
+celery = "*"
+redis = "*"
 
 [requires]
 python_version = "3.6"
