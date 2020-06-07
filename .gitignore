@@ -1,2 +1,6 @@
 #.env files
 *.env
+#sqlite db
+*.sqlite3
+#migrations
+**/migrations/*
