@@ -210,3 +210,37 @@ class BookClubModelTests(TestCase):
         )
         self.assertIn(profile, self.book_club.admins.all())
         self.assertIn(self.book_club, profile.admin_book_clubs.all())
+        
+    def test_current_read(self):
+        self.assertEqual(
+            self.book_club.current_read(), self.book1
+        )
+        
+    def test_profile_is_admin(self):
+        profile = models.Profile.objects.create(
+            user=get_user_model().objects.create_user(
+            username='testuser',
+            email='testuser@email.com',
+            password='testpass123'))
+        models.BookClubAdmin.objects.create(
+            admin=profile,
+            book_club=self.book_club,
+        )
+        self.assertTrue(profile.is_admin())
+        self.assertFalse(profile.is_member())
+    
+    def test_profile_is_member(self):
+        profile = models.Profile.objects.create(
+            user=get_user_model().objects.create_user(
+            username='testuser',
+            email='testuser@email.com',
+            password='testpass123'))
+        models.BookClubMember.objects.create(
+            member=profile,
+            book_club=self.book_club,
+        )
+        self.assertTrue(profile.is_member())
+        self.assertFalse(profile.is_admin())
+        
+class DiscussionTests(TestCase):
+    pass
