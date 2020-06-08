@@ -12,6 +12,9 @@ django-allauth = "*"
 celery = "*"
 redis = "*"
 pillow = "*"
+django-extensions = "*"
+pyparsing = "*"
+pydot = "*"
 
 [requires]
 python_version = "3.6"
