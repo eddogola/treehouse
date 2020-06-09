@@ -2,7 +2,7 @@ from django.db import models
 from django.db.models.aggregates import Sum
 from django.core.validators import RegexValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
-from django.db.models.constraints import UniqueConstraint
+from django.db.models.constraints import UniqueConstraint, CheckConstraint
 from django.db.models.query import Q
 import datetime
 import uuid
@@ -34,7 +34,7 @@ class Review(models.Model):
     def get_likes(self):
         return self.likes.count()
     
-class Comment(models.Model):
+class ReviewComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='comments')
     commenter = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='comments')
@@ -73,16 +73,6 @@ class Profile(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to=avatar_upload_path, blank=True, null=True)
     
-    def is_admin(self):
-        if self.book_club_admins.exists():
-            return True
-        return False
-    
-    def is_member(self):
-        if self.book_club_members.exists():
-            return True
-        return False
-    
     def upvote(self, discussion_comment_id):
         comment = DiscussionComment.objects.get(id=discussion_comment_id)
         CommentVote.objects.create(
@@ -99,6 +89,21 @@ class Profile(models.Model):
             down=1,
         )
     
+class Role(models.Model):
+
+    FOUNDER = 1
+    ADMIN = 2
+    REGULAR = 3
+    ROLES = (
+        (FOUNDER, 'Founder'),
+        (ADMIN, 'Admin'),
+        (REGULAR, 'Regular'),
+    )
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    role = models.IntegerField(choices=ROLES, default=REGULAR)
+
+################ book club models #################################
 class BookClub(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, unique=True)
@@ -106,7 +111,6 @@ class BookClub(models.Model):
     description = models.TextField()
     members = models.ManyToManyField(Profile, through='BookClubMember', related_name='book_clubs')
     reads = models.ManyToManyField(Book, through='BookClubRead', related_name='book_clubs')
-    admins = models.ManyToManyField(Profile, through='BookClubAdmin', related_name='admin_book_clubs')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     
@@ -122,8 +126,9 @@ class BookClub(models.Model):
         
 class BookClubMember(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    role = models.ForeignKey(Role, related_name='members', on_delete=models.CASCADE)
     book_club = models.ForeignKey(BookClub, on_delete=models.CASCADE, related_name='book_club_members')
-    member = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='book_club_members')
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='book_club_members')
     created = models.DateTimeField(auto_now_add=True)
     
 class BookClubRead(models.Model):
@@ -145,12 +150,6 @@ class BookClubRead(models.Model):
     def end_date(self):
         duration = datetime.timedelta(days=self.read_duration)
         return self.start_date + duration
-
-class BookClubAdmin(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    admin = models.ForeignKey(Profile, related_name='book_club_admins', on_delete=models.CASCADE)
-    book_club = models.ForeignKey(BookClub, related_name='book_club_admins', on_delete=models.CASCADE)
-    updated = models.DateTimeField(auto_now=True)
   
 class BookClubThread(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -159,20 +158,37 @@ class BookClubThread(models.Model):
     title = models.CharField(max_length=200)
     created = models.DateTimeField(auto_now=True)
     
-class Discussion(models.Model):
+##################### discussion models ###############################
+class BookDiscussion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     question = models.CharField(max_length=200, unique=True)
-    comments = models.ForeignKey('DiscussionComment', on_delete=models.CASCADE, 
-                                 related_name='%(class)ss')
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='discussions')
+    starter = models.ForeignKey(Profile, on_delete=models.CASCADE,
+                                related_name='started_discussions')
+    created = models.DateTimeField(auto_now=True)
+    
+class ThreadDiscussion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    book_club_thread = models.ForeignKey(BookClubThread, on_delete=models.CASCADE,
+                                         related_name='discussions')
+    starter = models.ForeignKey(BookClubMember, on_delete=models.CASCADE,
+                                related_name='started_discussions')
     created = models.DateTimeField(auto_now=True)
     
     class Meta:
-        abstract = True
+        constraints = (
+            CheckConstraint(check=Q('starter__role'==Role.ADMIN)|
+                                      Q('starter__role'==Role.FOUNDER), 
+                                      name='role_is_admin_or_founder'),
+        )
     
-class DiscussionComment(models.Model):
+##################### book discussion comment models ###############################
+class BookDiscussionComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    discussion = models.ForeignKey(BookDiscussion, related_name='comments', 
+                                   on_delete=models.CASCADE)
     commenter = models.ForeignKey(Profile, on_delete=models.PROTECT, 
-                                  related_name='discussion_comments')
+                                  related_name='book_discussion_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
     
@@ -184,12 +200,12 @@ class DiscussionComment(models.Model):
         downvotes = self.votes.filter(down=1)
         return len(list(downvotes))
     
-class CommentVote(models.Model):
+class BookCommentVote(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    comment = models.ForeignKey(DiscussionComment, on_delete=models.CASCADE, 
+    comment = models.ForeignKey(BookDiscussionComment, on_delete=models.CASCADE, 
                                 related_name='votes')
     voter = models.ForeignKey(Profile, on_delete=models.CASCADE, 
-                              related_name='votes')
+                              related_name='book_comment_votes')
     up = models.PositiveIntegerField()
     down = models.PositiveIntegerField()
     created = models.DateTimeField(auto_now=True)
@@ -197,23 +213,50 @@ class CommentVote(models.Model):
     class Meta:
         unique_together = ('comment', 'voter',)
     
-class CommentReply(models.Model):
+class BookCommentReply(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    comment = models.ForeignKey(DiscussionComment, on_delete=models.CASCADE, 
+    comment = models.ForeignKey(BookDiscussionComment, on_delete=models.CASCADE, 
                                 related_name='replies')
     body = models.TextField()
     replier = models.ForeignKey(Profile, on_delete=models.PROTECT, 
-                                related_name='comment_replies')
+                                related_name='book_comment_replies')
     created = models.DateTimeField(auto_now=True)
     
-class BookDiscussion(Discussion):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='discussions')
-    starter = models.ForeignKey(Profile, on_delete=models.CASCADE,
-                                related_name='started_discussions')
+class ThreadDiscussionComment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    discussion = models.ForeignKey(ThreadDiscussion, related_name='comments', 
+                                   on_delete=models.CASCADE)
+    commenter = models.ForeignKey(Profile, on_delete=models.PROTECT, 
+                                  related_name='thread_discussion_comments')
+    body = models.TextField()
+    created = models.DateTimeField(auto_now=True)
     
-class ThreadDiscussion(Discussion):
-    book_club_thread = models.ForeignKey(BookClubThread, on_delete=models.CASCADE,
-                                         related_name='discussions')
-    starter = models.ForeignKey(BookClubAdmin, on_delete=models.CASCADE,
-                                related_name='started_discussions')
+    def get_upvote_count(self):
+        upvotes = self.votes.filter(up=1)
+        return len(list(upvotes))
     
+    def get_downvote_count(self):
+        downvotes = self.votes.filter(down=1)
+        return len(list(downvotes))
+    
+class ThreadCommentVote(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    comment = models.ForeignKey(ThreadDiscussionComment, on_delete=models.CASCADE, 
+                                related_name='votes')
+    voter = models.ForeignKey(Profile, on_delete=models.CASCADE, 
+                              related_name='thread_comment_votes')
+    up = models.PositiveIntegerField()
+    down = models.PositiveIntegerField()
+    created = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('comment', 'voter',)
+    
+class ThreadCommentReply(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    comment = models.ForeignKey(ThreadDiscussionComment, on_delete=models.CASCADE, 
+                                related_name='replies')
+    body = models.TextField()
+    replier = models.ForeignKey(Profile, on_delete=models.PROTECT, 
+                                related_name='thread_comment_replies')
+    created = models.DateTimeField(auto_now=True)
