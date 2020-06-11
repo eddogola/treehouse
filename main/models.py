@@ -73,22 +73,6 @@ class Profile(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to=avatar_upload_path, blank=True, null=True)
     
-    def upvote(self, discussion_comment_id):
-        comment = DiscussionComment.objects.get(id=discussion_comment_id)
-        CommentVote.objects.create(
-            comment=comment,
-            voter=self,
-            up=1,
-        )
-        
-    def downvote(self, discussion_comment_id):
-        comment = DiscussionComment.objects.get(id=discussion_comment_id)
-        CommentVote.objects.create(
-            comment=comment,
-            voter=self,
-            down=1,
-        )
-    
 class Role(models.Model):
 
     FOUNDER = 1
@@ -101,7 +85,7 @@ class Role(models.Model):
     )
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    role = models.IntegerField(choices=ROLES, default=REGULAR)
+    role = models.IntegerField(choices=ROLES, default=REGULAR, unique=True)
 
 ################ book club models #################################
 class BookClub(models.Model):
@@ -123,6 +107,18 @@ class BookClub(models.Model):
     def current_read(self):
         read = BookClubRead.objects.get(book_club=self,current_read=True)
         return read.book
+    
+    def is_founder(self, profile):
+        role = Role.objects.get(role=Role.FOUNDER)
+        return BookClubMember.objects.filter(profile=profile, role=role).exists()
+    
+    def is_admin(self, profile):
+        role = Role.objects.get(role=Role.ADMIN)
+        return BookClubMember.objects.filter(profile=profile, role=role).exists()
+    
+    def is_regular(self, profile):
+        role = Role.objects.get(role=Role.REGULAR)
+        return BookClubMember.objects.filter(profile=profile, role=role).exists()
         
 class BookClubMember(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -158,6 +154,7 @@ class BookClubThread(models.Model):
     title = models.CharField(max_length=200)
     created = models.DateTimeField(auto_now=True)
     
+##########book
 class BookDiscussion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     question = models.CharField(max_length=200, unique=True)
@@ -174,27 +171,6 @@ class BookDiscussionComment(models.Model):
                                   related_name='book_discussions_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
-    
-    def get_upvote_count(self):
-        upvotes = self.votes.filter(up=1)
-        return len(list(upvotes))
-    
-    def get_downvote_count(self):
-        downvotes = self.votes.filter(down=1)
-        return len(list(downvotes))
-    
-class BookCommentVote(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    comment = models.ForeignKey(BookDiscussionComment, on_delete=models.CASCADE, 
-                                related_name='votes')
-    voter = models.ForeignKey(Profile, on_delete=models.CASCADE, 
-                              related_name='book_comments_votes')
-    up = models.PositiveIntegerField()
-    down = models.PositiveIntegerField()
-    created = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        unique_together = ('comment', 'voter',)
         
 class BookCommentReply(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -205,10 +181,12 @@ class BookCommentReply(models.Model):
                                 related_name='book_comments_replies')
     created = models.DateTimeField(auto_now=True)
     
+####thread discussion
 class ThreadDiscussion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    book_club_thread = models.ForeignKey(BookClubThread, on_delete=models.CASCADE,
+    thread = models.ForeignKey(BookClubThread, on_delete=models.CASCADE,
                                          related_name='discussions')
+    question = models.CharField(max_length=200, unique=True, default='General')
     starter = models.ForeignKey(BookClubMember, on_delete=models.CASCADE,
                                 related_name='thread_discussions')
     created = models.DateTimeField(auto_now=True)
@@ -221,27 +199,6 @@ class ThreadDiscussionComment(models.Model):
                                   related_name='thread_discussions_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
-    
-    def get_upvote_count(self):
-        upvotes = self.votes.filter(up=1)
-        return len(list(upvotes))
-    
-    def get_downvote_count(self):
-        downvotes = self.votes.filter(down=1)
-        return len(list(downvotes))
-    
-class ThreadCommentVote(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    comment = models.ForeignKey(ThreadDiscussionComment, on_delete=models.CASCADE, 
-                                related_name='votes')
-    voter = models.ForeignKey(Profile, on_delete=models.CASCADE, 
-                              related_name='thread_comments_votes')
-    up = models.PositiveIntegerField()
-    down = models.PositiveIntegerField()
-    created = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        unique_together = ('comment', 'voter',)
     
 class ThreadCommentReply(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

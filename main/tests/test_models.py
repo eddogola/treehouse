@@ -7,6 +7,13 @@ import datetime
 
 from main import models
 
+#TODO 1
+#add tests for every model in the new schema
+#TODO 2
+#add utilities for the models and test them
+#TODO 3
+#add mocking tests for celery
+
 class BookModelTests(TestCase):
     
     def setUp(self):
@@ -69,12 +76,12 @@ class BookModelTests(TestCase):
             reviewer=self.profile,
             body='very scrumptious',
         )
-        comment1 = models.Comment.objects.create(
+        comment1 = models.ReviewComment.objects.create(
             review=review,
             commenter=self.profile1,
             body='check this out:D',
         )
-        comment2 = models.Comment.objects.create(
+        comment2 = models.ReviewComment.objects.create(
             review=review,
             commenter=self.profile1,
             body='i really love your review',
@@ -132,6 +139,9 @@ class BookClubModelTests(TestCase):
             book_club=self.book_club,
             read_duration=10
         )
+        models.Role.objects.create(role=models.Role.FOUNDER)
+        models.Role.objects.create(role=models.Role.ADMIN)
+        models.Role.objects.create(role=models.Role.REGULAR)
     
     def test_book_club_read_end_date(self):
         self.assertEqual(self.read1.current_read, True)
@@ -184,63 +194,210 @@ class BookClubModelTests(TestCase):
             book=self.book2,
             book_club=self.book_club,
         ).exists())
-            
-    def test_book_club_members(self):
-        profile = models.Profile.objects.create(
-            user=get_user_model().objects.create_user(
-            username='testuser',
-            email='testuser@email.com',
-            password='testpass123'))
-        models.BookClubMember.objects.create(
-            book_club=self.book_club,
-            member=profile,
-        )
-        self.assertIn(profile, self.book_club.members.all())
-        self.assertIn(self.book_club, profile.book_clubs.all())
-    
-    def test_book_club_admins(self):
-        profile = models.Profile.objects.create(
-            user=get_user_model().objects.create_user(
-            username='testuser',
-            email='testuser@email.com',
-            password='testpass123'))
-        models.BookClubAdmin.objects.create(
-            book_club=self.book_club,
-            admin=profile,
-        )
-        self.assertIn(profile, self.book_club.admins.all())
-        self.assertIn(self.book_club, profile.admin_book_clubs.all())
         
     def test_current_read(self):
         self.assertEqual(
             self.book_club.current_read(), self.book1
-        )
+        ) 
         
-    def test_profile_is_admin(self):
-        profile = models.Profile.objects.create(
-            user=get_user_model().objects.create_user(
-            username='testuser',
-            email='testuser@email.com',
-            password='testpass123'))
-        models.BookClubAdmin.objects.create(
-            admin=profile,
-            book_club=self.book_club,
-        )
-        self.assertTrue(profile.is_admin())
-        self.assertFalse(profile.is_member())
-    
-    def test_profile_is_member(self):
+    def test_book_club_regular_member(self):
         profile = models.Profile.objects.create(
             user=get_user_model().objects.create_user(
             username='testuser',
             email='testuser@email.com',
             password='testpass123'))
         models.BookClubMember.objects.create(
-            member=profile,
+            role=models.Role.objects.get(role=models.Role.REGULAR),
             book_club=self.book_club,
+            profile=profile,
         )
-        self.assertTrue(profile.is_member())
-        self.assertFalse(profile.is_admin())
+        self.assertIn(profile, self.book_club.members.all())
+        self.assertIn(self.book_club, profile.book_clubs.all())
+        self.assertTrue(self.book_club.is_regular(profile))
+        self.assertFalse(self.book_club.is_admin(profile))
+        self.assertFalse(self.book_club.is_founder(profile))
+    
+    def test_book_club_admin_member(self):
+        profile = models.Profile.objects.create(
+            user=get_user_model().objects.create_user(
+            username='testuser',
+            email='testuser@email.com',
+            password='testpass123'))
+        models.BookClubMember.objects.create(
+            role=models.Role.objects.get(role=models.Role.ADMIN),
+            book_club=self.book_club,
+            profile=profile,
+        )
+        self.assertIn(profile, self.book_club.members.all())
+        self.assertIn(self.book_club, profile.book_clubs.all())
+        self.assertTrue(self.book_club.is_admin(profile))
+        self.assertFalse(self.book_club.is_founder(profile))
+        self.assertFalse(self.book_club.is_regular(profile))
         
-class DiscussionTests(TestCase):
-    pass
+    def test_book_club_founder_member(self):
+        profile = models.Profile.objects.create(
+            user=get_user_model().objects.create_user(
+            username='testuser',
+            email='testuser@email.com',
+            password='testpass123'))
+        models.BookClubMember.objects.create(
+            role=models.Role.objects.get(role=models.Role.FOUNDER),
+            book_club=self.book_club,
+            profile=profile,
+        )
+        self.assertIn(profile, self.book_club.members.all())
+        self.assertIn(self.book_club, profile.book_clubs.all())
+        self.assertTrue(self.book_club.is_founder(profile))
+        self.assertFalse(self.book_club.is_admin(profile))
+        self.assertFalse(self.book_club.is_regular(profile))
+        
+class BookDiscussionTests(TestCase):
+    
+    def setUp(self):
+        super().setUp()
+        self.profile = models.Profile.objects.create(
+                user=get_user_model().objects.create_user(
+                    username='test', email='testuser@email.com',
+                    password='testpass123'
+                )
+            )
+        self.book_discussion = models.BookDiscussion.objects.create(
+            question="Is Kino's only dream is to see his community rise in the socio-economic ladder?",
+            book=models.Book.objects.create(
+                isbn='1234567890',
+                title='The Pearl',
+                author='John Steinbeck',
+                description = 'test description'
+            ),
+            starter=self.profile
+        )
+        
+    def test_details(self):
+        self.assertTrue(
+            models.BookDiscussion.objects.filter(book__isbn='1234567890').exists()
+        )
+        self.assertEqual(
+            models.Book.objects.get(isbn='1234567890').discussions.first().starter,
+            self.profile
+        )
+        self.assertEqual(
+            self.profile.book_discussions.first().book.author, 'John Steinbeck'
+        )
+        
+    def test_comment_details(self):
+        profile = models.Profile.objects.create(
+                user=get_user_model().objects.create_user(
+                    username='johndoe', email='jondoe@email.com',
+                    password='testpass123'
+                )
+            )
+        comment = models.BookDiscussionComment.objects.create(
+            discussion=self.book_discussion,
+            commenter=profile,
+            body='I believe so since he mainly wanted the education of his son.'
+        )
+        self.assertEqual(
+            profile.book_discussions_comments.first().body,
+            'I believe so since he mainly wanted the education of his son.'
+        )
+        self.assertEqual(
+            self.book_discussion.comments.first(), comment
+        )
+        
+    def test_comment_replies(self):
+        comment = models.BookDiscussionComment.objects.create(
+            discussion=self.book_discussion,
+            commenter=models.Profile.objects.create(
+                user=get_user_model().objects.create_user(
+                    username='johndoe', email='jondoe@email.com',
+                    password='testpass123'
+                )
+            ),
+            body='lorem ipsum dolor sit amet.',
+        )
+        models.BookCommentReply.objects.create(
+            comment=comment,
+            replier=self.profile,
+            body='i like your content',
+        )
+        self.assertEqual(
+            comment.replies.first().body, 
+            'i like your content',
+        )
+        self.assertEqual(
+            self.profile.book_comments_replies.first().body,
+            'i like your content'
+        )
+        
+class ThreadDiscussionTests(TestCase):
+    
+    def setUp(self):
+        super().setUp()
+        self.profile = models.Profile.objects.create(
+                user=get_user_model().objects.create_user(
+                    username='test', email='testuser@email.com',
+                    password='testpass123'
+                )
+            )
+        self.book_club = models.BookClub.objects.create(
+            name='Test Book Club',
+            location='Nairobi',
+            description='lorem ipsum dolor sit amet',
+        )
+        self.thread = models.BookClubThread.objects.create(
+            book_club=self.book_club,
+            title='General',
+        )
+        self.thread_discussion = models.ThreadDiscussion.objects.create(
+            thread=self.thread,
+            question="Test Q/A",
+            starter=models.BookClubMember.objects.create(
+                book_club=self.book_club,
+                profile=self.profile,
+                role=models.Role.objects.create(role=models.Role.REGULAR)
+            )
+        )
+        
+    def test_details(self):
+        self.assertTrue(
+            models.BookClubThread.objects.filter(title='General').exists()
+        )
+        self.assertIn(self.thread, self.book_club.threads.all())
+        self.assertEqual(
+            self.book_club.threads.first().discussions.first().question, 
+            "Test Q/A"
+        )
+        
+    def test_comment_details(self):
+        comment = models.ThreadDiscussionComment.objects.create(
+            discussion=self.thread_discussion,
+            commenter=self.profile,
+            body='test qomment'
+        )
+        self.assertEqual(
+            self.profile.thread_discussions_comments.first().body,
+            'test qomment'
+        )
+        self.assertEqual(
+            self.thread_discussion.comments.first(), comment
+        )
+        
+    def test_comment_replies(self):
+        comment = models.ThreadDiscussionComment.objects.create(
+            discussion=self.thread_discussion,
+            commenter=self.profile,
+            body='lorem ipsum dolor sit amet.',
+        )
+        models.ThreadCommentReply.objects.create(
+            comment=comment,
+            replier=self.profile,
+            body='i like your content',
+        )
+        self.assertEqual(
+            comment.replies.first().body, 
+            'i like your content',
+        )
+        self.assertEqual(
+            self.profile.thread_comments_replies.first().body,
+            'i like your content'
+        )
