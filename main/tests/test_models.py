@@ -7,13 +7,6 @@ import datetime
 
 from main import models
 
-#TODO 1
-#add tests for every model in the new schema
-#TODO 2
-#add utilities for the models and test them
-#TODO 3
-#add mocking tests for celery
-
 class BookModelTests(TestCase):
     
     def setUp(self):
@@ -111,7 +104,30 @@ class BookModelTests(TestCase):
         )
         self.assertIn(rating, self.profile.ratings.all())
         with self.assertRaises(ValidationError):
-            rating.full_clean()        
+            rating.full_clean()
+
+    def test_book_can_be_rated_only_once_by_a_single_profile(self):
+        models.Rating.objects.create(
+            book=self.book1,
+            rater=self.profile,
+            rating=4)
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                models.Rating.objects.create(
+                book=self.book1,
+                rater=self.profile,
+                rating=3)
+
+    def test_get_book_rating(self):
+        models.Rating.objects.create(
+            book=self.book1,
+            rater=self.profile,
+            rating=4)
+        models.Rating.objects.create(
+                book=self.book1,
+                rater=self.profile1,
+                rating=3)
+        self.assertEqual(self.book1.get_book_rating(), 3.5)   
     
 class BookClubModelTests(TestCase):
     
