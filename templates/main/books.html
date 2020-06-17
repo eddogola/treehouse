@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block content %}
+    <ul>
+    {% for book in books %}
+        <li>
+            {% thumbnail book.cover "150x75" as im %}
+                <img src="{{ im.url }}" height="{{ im.height }}" 
+                width="{{ im.width }}" alt="{{ book.title }} cover">
+            {% endthumbnail %}
+            <p><a href="{% url 'book_detail' pk=book.id %}">{{ book.title }}</a></p>
+            <p>{{ book.author }}</p>
+        </li><br>
+    {% endfor %}
+    </ul>
+{% endblock content %}

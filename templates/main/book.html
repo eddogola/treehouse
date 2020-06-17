@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block title %}{{ book.title }} - {{ block.super }}{% endblock title %}
+
+{% block content %}
+    <h2>{{ book.title }}</h2>
+    {% thumbnail book.cover "150x75" as im %}
+        <img src="{{ im.url }}" width="{{ im.width }}" height="{{ im.height }}" 
+        alt="{{ book.title }} cover">
+    {% endthumbnail %}
+    <p>{{ book.isbn }}</p>
+    <p>{{ book.author }}</p>
+    <p>{{ book.description }}</p>
+    <!--Reviews-->
+    <h2>Reviews</h2><hr>
+    <li>
+        {% for review in book.reviews.all %}
+            <li>
+                <!--
+                    <img src="{{ review.reviewer.avatar }}" 
+                    alt="{{ review.reviewer.user.username }}">
+                -->
+                <a href="{% url 'review_detail' pk=review.id %}">
+                    {{ review.body|truncatewords:"50" }}
+                </a>
+                <p>Likes: {{ review.get_likes }}</p>
+            </li>
+        {% empty %}
+            <p>No reviews for this book yet</p>
+            <a href="#">be the first to review</a>
+        {% endfor %}
+    </li>
+    <hr>
+{% endblock content %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ review.reviewer.user.username }}'s review of {{ review.book }} | {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+    <p>
+        {{ review.created|date:"M d, Y h:iA" }}
+    </p>
+    <p>reviewed by {{ review.reviewer.user.username }}</p>
+    <p>{{ review.body }}</p>
+    <!--Comments-->
+    <h2>comments</h2><hr>
+    <ul>
+    {% for comment in review.comments.all %}
+        <li>
+            <p>commented by {{ comment.commentor }}</p>
+            <p>{{ comment.created|date:"M d, Y h:iA" }}</p>
+            <p>{{ comment.body }}</p>
+        </li><hr>
+    {% empty %}
+        <p>No comment yet</p>
+        <a href="#">be the first to comment</a>
+    {% endfor %}
+    </ul>
+{% endblock content %}
