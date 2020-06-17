@@ -86,6 +86,9 @@ class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to=avatar_upload_path, blank=True, null=True)
+
+    def __str__(self):
+        return self.user.username
     
 class Role(models.Model):
 
