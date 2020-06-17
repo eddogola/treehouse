@@ -14,5 +14,21 @@ class BookAdmin(admin.ModelAdmin):
             "<img src='{}'>".format(cover.url)
         )
 
-admin.site.register(models.Review)
+class LikesInline(admin.TabularInline):
+    model = models.Like
+
+class ReviewCommentsInline(admin.TabularInline):
+    model = models.ReviewComment
+
+@admin.register(models.Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('book', 'reviewer', 'review')
+    inlines = (
+        LikesInline,
+        ReviewCommentsInline,
+    )
+
+    def review(self, obj):
+        return obj.body[:60] + '...'
+
 admin.site.register(models.Profile)
