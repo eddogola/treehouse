@@ -15,12 +15,23 @@ class Book(models.Model):
     title = models.CharField(max_length=200, unique=True)
     author = models.CharField(max_length=200)
     description = models.TextField()
+
+    def cover_upload_path(instance, filename):
+        _, ext = os.path.splitext(filename)
+        return 'book-covers/{}{}'.format(instance.title, ext)
+
+    cover = models.ImageField(blank=True, null=True, upload_to=cover_upload_path)
     
     def __str__(self):
         return '{} - {}'.format(
             self.title,
             self.author,
         )
+
+    def get_book_rating(self):
+        ratings = [rating.rating for rating in self.ratings.all()]
+        rating = sum(ratings) / len(ratings)
+        return rating
 
 class Review(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -53,6 +64,9 @@ class Rating(models.Model):
     rating = models.PositiveIntegerField(validators=[
         MaxValueValidator(5)])
     rater = models.ForeignKey('Profile', on_delete=models.PROTECT, related_name='ratings')
+
+    class Meta:
+        unique_together = ['book', 'rater']
     
     def __str__(self):
         return '{} - {}'.format(
