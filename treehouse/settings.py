@@ -150,7 +150,13 @@ LOGIN_REDIRECT_URL = '/'
 EMAIL_BACKEND = 'django.core.mail.console.backends.EmailBackend'
 
 #Celery
-CELERY_BROKER_URL = env('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = env('CELERY_BROKER_URL')
+CELERY_BROKER_URL = env('REDIS_CACHE')
+CELERY_RESULT_BACKEND = env('REDIS_CACHE')
 CELERY_TASK_SERIALIZER = 'pickle'
 CELERY_RESULT_SERIALIZER = 'json'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
