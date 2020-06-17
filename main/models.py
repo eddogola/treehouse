@@ -38,6 +38,7 @@ class Review(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='reviews')
     reviewer = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='reviews')
     body = models.TextField()
+    created = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return self.body[:20] + '...'
@@ -48,15 +49,21 @@ class Review(models.Model):
 class ReviewComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='comments')
-    commenter = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='comments')
+    commentor = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['review', 'commentor']
     
 class Like(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     review = models.ForeignKey(Review, related_name='likes', on_delete=models.CASCADE)
     liker = models.ForeignKey('Profile', related_name='likes', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['review', 'liker']
     
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -184,7 +191,7 @@ class BookDiscussionComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     discussion = models.ForeignKey(BookDiscussion, related_name='comments', 
                                    on_delete=models.CASCADE)
-    commenter = models.ForeignKey(Profile, on_delete=models.PROTECT, 
+    commentor = models.ForeignKey(Profile, on_delete=models.PROTECT, 
                                   related_name='book_discussions_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
@@ -212,7 +219,7 @@ class ThreadDiscussionComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     discussion = models.ForeignKey(ThreadDiscussion, related_name='comments', 
                                    on_delete=models.CASCADE)
-    commenter = models.ForeignKey(Profile, on_delete=models.PROTECT, 
+    commentor = models.ForeignKey(Profile, on_delete=models.PROTECT, 
                                   related_name='thread_discussions_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
