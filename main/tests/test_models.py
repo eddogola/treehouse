@@ -71,15 +71,32 @@ class BookModelTests(TestCase):
         )
         comment1 = models.ReviewComment.objects.create(
             review=review,
-            commenter=self.profile1,
+            commentor=self.profile1,
             body='check this out:D',
         )
         comment2 = models.ReviewComment.objects.create(
             review=review,
-            commenter=self.profile1,
+            commentor=self.profile,
             body='i really love your review',
         )
-        self.assertEqual([comment1, comment2], list(review.comments.all()))
+        self.assertIn(comment1, review.comments.all())
+        self.assertIn(comment2, review.comments.all())
+
+    def test_book_review_can_be_commented_only_once_by_a_single_profile(self):
+        review = models.Review.objects.create(
+            book=self.book1,
+            reviewer=self.profile,
+            body='very scrumptious',
+        )
+        models.ReviewComment.objects.create(
+            review=review,
+            commentor=self.profile,
+            body='funny review lol')
+        with self.assertRaises(IntegrityError):
+            models.ReviewComment.objects.create(
+                review=review,
+                commentor=self.profile,
+                body='yadda yadda')
         
     def text_book_review_likes(self):
         review = models.Review.objects.create(
@@ -94,6 +111,21 @@ class BookModelTests(TestCase):
         like = models.Like.objects.first()
         self.assertEqual(like.review.body, 'very scrumptious')
         self.assertEqual(review.get_likes(), 1)
+
+    def test_review_can_be_liked_by_a_profile_only_once(self):
+        review = models.Review.objects.create(
+            book=self.book1,
+            reviewer=self.profile,
+            body='very scrumptious',
+        )
+        models.Like.objects.create(
+            review=review,
+            liker=self.profile1,
+        )
+        with self.assertRaises(IntegrityError):
+            models.Like.objects.create(
+            review=review,
+            liker=self.profile1)
     
     def test_book_rating(self):
         #test max-value
@@ -111,12 +143,11 @@ class BookModelTests(TestCase):
             book=self.book1,
             rater=self.profile,
             rating=4)
-        with transaction.atomic():
-            with self.assertRaises(IntegrityError):
+        with self.assertRaises(IntegrityError):
                 models.Rating.objects.create(
                 book=self.book1,
                 rater=self.profile,
-                rating=3)
+                rating=3)            
 
     def test_get_book_rating(self):
         models.Rating.objects.create(
@@ -309,7 +340,7 @@ class BookDiscussionTests(TestCase):
             )
         comment = models.BookDiscussionComment.objects.create(
             discussion=self.book_discussion,
-            commenter=profile,
+            commentor=profile,
             body='I believe so since he mainly wanted the education of his son.'
         )
         self.assertEqual(
@@ -323,7 +354,7 @@ class BookDiscussionTests(TestCase):
     def test_comment_replies(self):
         comment = models.BookDiscussionComment.objects.create(
             discussion=self.book_discussion,
-            commenter=models.Profile.objects.create(
+            commentor=models.Profile.objects.create(
                 user=get_user_model().objects.create_user(
                     username='johndoe', email='jondoe@email.com',
                     password='testpass123'
@@ -387,7 +418,7 @@ class ThreadDiscussionTests(TestCase):
     def test_comment_details(self):
         comment = models.ThreadDiscussionComment.objects.create(
             discussion=self.thread_discussion,
-            commenter=self.profile,
+            commentor=self.profile,
             body='test qomment'
         )
         self.assertEqual(
@@ -401,7 +432,7 @@ class ThreadDiscussionTests(TestCase):
     def test_comment_replies(self):
         comment = models.ThreadDiscussionComment.objects.create(
             discussion=self.thread_discussion,
-            commenter=self.profile,
+            commentor=self.profile,
             body='lorem ipsum dolor sit amet.',
         )
         models.ThreadCommentReply.objects.create(
