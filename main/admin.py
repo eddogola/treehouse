@@ -13,3 +13,6 @@ class BookAdmin(admin.ModelAdmin):
         return format_html(
             "<img src='{}'>".format(cover.url)
         )
+
+admin.site.register(models.Review)
+admin.site.register(models.Profile)
