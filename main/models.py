@@ -127,10 +127,19 @@ class Role(models.Model):
 
 ################ book club models #################################
 class BookClub(models.Model):
+
+    def logo_upload_path(instance, filename):
+        _, ext = os.path.splitext(filename)
+        return '{}/{}{}'.format(
+            'book-clubs-logos', 
+            uuid.uuid4(),
+            ext)
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, unique=True)
     location = models.CharField(max_length=200)
     description = models.TextField()
+    logo = models.ImageField(blank=True, null=True, upload_to=logo_upload_path)
     members = models.ManyToManyField(Profile, through='BookClubMember', related_name='book_clubs')
     reads = models.ManyToManyField(Book, through='BookClubRead', related_name='book_clubs')
     created = models.DateTimeField(auto_now_add=True)
