@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ book_club.name }} - {{ book_club.location }}
+{% endblock title %}
+
+{% block content %}
+    <h1>{{ book_club.name }}</h1>
+    <p>{{ book_club.location }}</p>
+    <p>{{ book_club.description }}</p>
+    <p>{{ book_club.members.count }} members</p>
+    <hr>
+    <strong>Current Read</strong>
+    <a href="{% url 'book' pk=book_club.current_read.pk %}">
+        {{ book_club.current_read }}
+    </a>
+    <hr>
+    <a href="#">previous reads</a><!--#TODO-->
+    <a href="#">members</a><!--#TODO-->
+    <a href="#">threads</a><!--#TODO-->
+{% endblock content %}

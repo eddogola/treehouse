@@ -5,6 +5,9 @@
 
 {% block content %}
     <h2>{{ book.title }}</h2>
+    <p>Rating: {{ book.get_book_rating }}
+        &middot;{{ book.ratings.count }} ratings
+    </p>
     {% thumbnail book.cover "150x75" as im %}
         <img src="{{ im.url }}" width="{{ im.width }}" height="{{ im.height }}" 
         alt="{{ book.title }} cover">

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block content %}
+<h1>Book Discussions</h1><hr>
+<a href="#">Start a book discussion</a> <!--#TODO-->
+{% for book in books %}
+    {% thumbnail book.cover "150x75" as im %}
+        <img src="{{ im.url }}" height="{{ im.height }}" 
+        width="{{ im.width }}" alt="{{ book.title }}">
+    {% endthumbnail %}
+    <h3>{{ book.title }}</h3>
+    {% for discussion in book.discussions.all %}
+        <a href="{% url 'book_discussion_detail' pk=discussion.id %}">
+            {{ discussion.question }}
+        </a><!--#TODO-->
+        <p>{{ discussion.created|date:"M d, Y h:iA" }}</p>
+        <p>started by {{ discussion.starter }}</p>
+    {% endfor %}
+    <hr>
+{% empty %}
+    <p>No book discussions started yet...</p>
+    <a href="#">be the first to start a discussion</a>
+{% endfor %}
+{% endblock content %}
