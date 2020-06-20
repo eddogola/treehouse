@@ -15,6 +15,10 @@ class Book(models.Model):
     title = models.CharField(max_length=200, unique=True)
     author = models.CharField(max_length=200)
     description = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created']
 
     def cover_upload_path(instance, filename):
         _, ext = os.path.splitext(filename)
@@ -30,8 +34,11 @@ class Book(models.Model):
 
     def get_book_rating(self):
         ratings = [rating.rating for rating in self.ratings.all()]
-        rating = sum(ratings) / len(ratings)
-        return rating
+        try:
+            rating = sum(ratings) / len(ratings)
+            return rating
+        except ZeroDivisionError:
+            return 0
 
 class Review(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -39,6 +46,9 @@ class Review(models.Model):
     reviewer = models.ForeignKey('Profile', on_delete=models.CASCADE, related_name='reviews')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created']
     
     def __str__(self):
         return self.body[:20] + '...'
@@ -55,6 +65,7 @@ class ReviewComment(models.Model):
 
     class Meta:
         unique_together = ['review', 'commentor']
+        ordering = ['-created']
     
 class Like(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -110,6 +121,9 @@ class Role(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.IntegerField(choices=ROLES, default=REGULAR, unique=True)
+
+    def __str__(self):
+        return self.ROLES[self.role - 1][1]
 
 ################ book club models #################################
 class BookClub(models.Model):
@@ -178,7 +192,7 @@ class BookClubThread(models.Model):
     title = models.CharField(max_length=200)
     created = models.DateTimeField(auto_now=True)
     
-##########book
+##########book discussion
 class BookDiscussion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     question = models.CharField(max_length=200, unique=True)
@@ -186,6 +200,14 @@ class BookDiscussion(models.Model):
     starter = models.ForeignKey(Profile, on_delete=models.CASCADE,
                                 related_name='book_discussions')
     created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created']
+
+    def  __str__(self):
+        return '{} : {}'.format(
+            self.book,
+            self.question)
     
 class BookDiscussionComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -195,6 +217,9 @@ class BookDiscussionComment(models.Model):
                                   related_name='book_discussions_comments')
     body = models.TextField()
     created = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.body[:60] + '...'
         
 class BookCommentReply(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
