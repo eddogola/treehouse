@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ book_club.name }} | Reads - {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+    <h1>Reads</h1><hr>
+    {% for read in reads %}
+        <a href="{% url 'book_detail' pk=read.book.id %}">
+            <b>
+                {{ read.book }}
+                {% if read.current_read %}
+                    (current)
+                {% endif %}
+            </b>
+        </a>
+        <p>started on {{ read.start_date }}</p>
+        {% if read.current_read %}
+            <p>will be completed on {{ read.end_date }}</p>
+        {% else %}
+            <p>completed on {{ read.end_date }}</p>
+        {% endif %}
+    {% empty %}
+        <p>This club does not have any reads...well, yet</p>
+    {% endfor %}
+{% endblock content %}

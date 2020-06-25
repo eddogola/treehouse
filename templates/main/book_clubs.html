@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Book Clubs - {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+    <h1>Book Clubs</h1><hr>
+    <ul>
+    {% for book_club in book_clubs %}
+        <li>
+            <a href="{% url 'book_club_detail' pk=book_club.id %}">
+                {{ book_club.name }}
+            </a>
+            <p>{{ book_club.location }}</p>
+            <p>Started on: {{ book_club.created|date:"M d, Y" }}</p>
+        </li>
+    {% empty %}
+        <p>No book clubs added yet...</p>
+        <a href="#">create a book club for your location</a><!--#TODO-->
+    {% endfor %}
+    </ul><hr>
+{% endblock content %}

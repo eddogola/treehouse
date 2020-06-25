@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block title %}
+    {{ discussion.thread.title }} - {{ discussion.question }}
+{% endblock title %}
+
+{% block content %}
+    <h2>{{ discussion.thread.title }}</h2>
+    <!--Question-->
+    <h3>{{ discussion.question }}</h3>
+    <!--Discussion comments-->
+    <ul>
+    {% for comment in discussion.comments.all %}
+        <li>
+        <p>{{ comment.commentor }} {{ comment.created|date:"M d, Y h:iA" }} </p> 
+        <p>{{ comment.body }}</p>
+        {% for reply in comment.replies.all %}
+            <p><i>{{ reply.replier }}</i> {{ reply.created|date:"M d, Y h:iA" }}</p>
+            <p><i>{{ reply.body }}</i></p>
+        {% endfor %}
+        </li><hr>
+    {% empty %}
+        <p>No comments yet</p>
+        <a href="#">Be the first to comment</a><!--#TODO-->
+    {% endfor %}
+    </ul>
+{% endblock content %}

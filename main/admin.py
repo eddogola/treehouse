@@ -66,6 +66,7 @@ class BookClubMemberInline(admin.TabularInline):
 class BookClubThreadInline(admin.TabularInline):
     model = models.BookClubThread
 
+@admin.register(models.BookClub)
 class BookClubAdmin(admin.ModelAdmin):
     inlines = (
         BookClubReadInline,

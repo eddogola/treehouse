@@ -10,12 +10,37 @@
     <p>{{ book_club.description }}</p>
     <p>{{ book_club.members.count }} members</p>
     <hr>
+    <h2>Started by</h2>
+    {% if founders %}
+    <ul>
+        {% for founder in founders %}
+            <li>
+                {{ founder }}<!--#TODO use first name and last name-->
+            </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if admins %}
+    <h2>Moderators</h2>
+    <ul>
+        {% for admin in admins %}
+            <li>
+                {{ admin }}<!--#TODO use first name and last name-->
+            </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     <strong>Current Read</strong>
-    <a href="{% url 'book' pk=book_club.current_read.pk %}">
-        {{ book_club.current_read }}
-    </a>
+    {% if book_club.current_read %}
+        <a href="{% url 'book_detail' pk=book_club.current_read.pk %}">
+            {{ book_club.current_read }}
+        </a>
+    {% else %}
+        <p>...Oops, no current read, yet</p>
+    {% endif %}
     <hr>
-    <a href="#">previous reads</a><!--#TODO-->
-    <a href="#">members</a><!--#TODO-->
-    <a href="#">threads</a><!--#TODO-->
+    <a href="{% url 'book_club_reads' pk=book_club.id %}">previous reads</a><!--#TODO-->
+    <a href="{% url 'book_club_members' pk=book_club.id %}">members</a>
+    <a href="{% url 'book_club_threads' pk=book_club.id %}">threads</a>
 {% endblock content %}

@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+import datetime
 
 from main import models
 
@@ -116,3 +117,80 @@ class MainTests(TestCase):
         self.assertContains(resp, 'How many problems ya got?')
         self.assertContains(resp, 'A lot lol!')
         self.assertContains(resp, 'lmao')
+
+class BookClubTests(TestCase):
+    
+    def setUp(self):
+        super().setUp()
+        self.book_club = models.BookClub.objects.create(
+            name='Oprah Winfrey Book Club',
+            location='Kilimani',
+            description = 'nano')
+        self.book = models.Book.objects.create(
+                isbn='1234238189',
+                title='The cathedral and the bazaar',
+                author='Plato',
+                description='antique')
+        self.profile = models.Profile.objects.create(
+                    user=get_user_model().objects.create_user(
+                    username='testuser',
+                    email='testuser@email.com',
+                    password='testpass123'))
+
+    def test_book_club_list(self):
+        models.BookClub.objects.create(
+            name='Ogola Book Club',
+            location='Kitengela',
+            description = 'nona')
+        resp = self.client.get(reverse('book_club_list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Oprah Winfrey Book Club')
+        self.assertContains(resp, 'Ogola Book Club')
+
+    def test_book_club_detail(self):
+        read = models.BookClubRead.objects.create(
+            book=self.book,
+            book_club = self.book_club,
+            start_date = datetime.datetime.today(),
+            read_duration = 16)
+        resp = self.client.get(reverse('book_club_detail', args=[self.book_club.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'nano')
+        #current read displayed
+        self.assertContains(resp, 'The cathedral and the bazaar')
+
+    def test_book_club_threads_discussions(self):
+        thread = models.BookClubThread.objects.create(
+            book_club=self.book_club,
+            title='General')
+        discussion = models.ThreadDiscussion.objects.create(
+            thread=thread,
+            question='Introduced yourself yet?',
+            starter=models.BookClubMember.objects.create(
+                book_club=self.book_club,
+                profile=self.profile,
+                role=models.Role.objects.create(role=models.Role.REGULAR)))
+        resp = self.client.get(reverse('book_club_threads', args=[self.book_club.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'General')
+        self.assertContains(resp, 'Introduced yourself yet?')
+
+    def test_book_club_reads(self):
+        read = models.BookClubRead.objects.create(
+            book_club=self.book_club,
+            book=self.book,
+            start_date=datetime.datetime.today(),
+            read_duration=12)
+        resp = self.client.get(reverse('book_club_reads', args=[self.book_club.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.book.title)
+
+    def test_book_club_members(self):
+        member = models.BookClubMember.objects.create(
+            book_club=self.book_club,
+            profile=self.profile,
+            role=models.Role.objects.create(role=models.Role.REGULAR))
+        resp = self.client.get(reverse('book_club_members', args=[self.book_club.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.profile.user.username)
+        self.assertContains(resp, 'Regular')

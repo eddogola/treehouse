@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ book_club.name }} members  - {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+    <h1>{{ book_club.name }} members </h1><hr>
+    <ul>
+    {% for member in members %}
+        <p>{{ member.profile }}    {{ member.role }}</p>
+    {% endfor %}
+    </ul>
+{% endblock content %}

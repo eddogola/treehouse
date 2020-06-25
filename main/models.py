@@ -173,6 +173,9 @@ class BookClubMember(models.Model):
     book_club = models.ForeignKey(BookClub, on_delete=models.CASCADE, related_name='book_club_members')
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='book_club_members')
     created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return '{}: {}'.format(self.profile, self.book_club)
     
 class BookClubRead(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -189,17 +192,11 @@ class BookClubRead(models.Model):
             UniqueConstraint(fields=['book_club', 'current_read'], name='single_active_book_club_read',
                              condition=Q(current_read=True)),
         )
+        ordering = ['-start_date']
     
     def end_date(self):
         duration = datetime.timedelta(days=self.read_duration)
         return self.start_date + duration
-  
-class BookClubThread(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    book_club = models.ForeignKey(BookClub, on_delete=models.CASCADE, 
-                                  related_name='threads')
-    title = models.CharField(max_length=200)
-    created = models.DateTimeField(auto_now=True)
     
 ##########book discussion
 class BookDiscussion(models.Model):
@@ -240,6 +237,21 @@ class BookCommentReply(models.Model):
     created = models.DateTimeField(auto_now=True)
     
 ####thread discussion
+class BookClubThread(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    book_club = models.ForeignKey(BookClub, on_delete=models.CASCADE, 
+                                  related_name='threads')
+    title = models.CharField(max_length=200)
+    created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created']
+
+    def __str__(self):
+        return '{} - {}'.format(
+            self.title,
+            self.book_club.name)
+
 class ThreadDiscussion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     thread = models.ForeignKey(BookClubThread, on_delete=models.CASCADE,
@@ -248,6 +260,12 @@ class ThreadDiscussion(models.Model):
     starter = models.ForeignKey(BookClubMember, on_delete=models.CASCADE,
                                 related_name='thread_discussions')
     created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created']
+
+    def __str__(self):
+        return self.question
     
 class ThreadDiscussionComment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

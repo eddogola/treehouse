@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ book_club.name }} | Threads - {{ block.super }}
+{% endblock title %}
+
+{% block content %}
+    <h1>{{ book_club.name }} threads</h1><hr>
+    {% for thread in threads %}
+        <b>{{ thread.title }}</b>
+        <ul>
+            {% for discussion in thread.discussions.all %}
+                <li>
+                    <a href="{% url 'thread_discussion_detail' pk=discussion.id %}">
+                        {{ discussion.question }}
+                    </a>
+                    <p>{{ discussion.comments.count }} comments</p>
+                </li>
+            {% empty %}
+                <p>Nothing here yet</p>
+            {% endfor %}
+        </ul>
+    {% empty %}
+        <p>Nothing here...</p>
+    {% endfor %}
+{% endblock content %}
